@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
+#include <unistd.h>
 //variáveis globais
 typedef unsigned char cell_t;
 int rank, num_threads, lines_per_thread, size;
@@ -153,9 +154,16 @@ inline void lpt () {
 
 void slave () {
   int master = num_threads-1;
-  MPI_Bcast(&size, 1, MPI_INT, master, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
 
+  //info[0]: size; info[1]: num_threads corrigido
+  int info[2];
+  MPI_Bcast(info, 2, MPI_INT, master, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+  size = info[0];
+  num_threads = info[1];
+  if (rank >= num_threads) {
+    return;
+  }
   lpt();
 
   int first = (rank == 0); //1 se primeira thread
@@ -193,7 +201,21 @@ MPI_STATUS_IGNORE);
 MPI_COMM_WORLD);
   free(my_slice);
 }
-
+//imprime board no final
+void end(cell_t* board) {
+  #ifdef RESULT
+    printf("Final:\n");
+    print (board,size);
+  #endif
+  free(board);
+}
+//quando mestre é única thread
+void single (int steps, cell_t* board) {
+  for (int step = 0; step < steps; step++) {
+    play(board, size, size);
+  }
+  end(board);
+}
 void master (char* filename) {
 
   int steps;
@@ -206,6 +228,16 @@ void master (char* filename) {
   read_file (f, board, size);
   fclose(f);
 
+  if (num_threads > size) {
+    num_threads = size;
+    printf("Aviso: há mais threads que linhas. Apenas %d threads serão usadas.\n",
+     num_threads);
+  }
+
+  if (num_threads == 1) {
+    single(steps, board);
+    return;
+  }
   #ifdef DEBUG
   printf("Initial:\n");
   print(board,size);
@@ -219,8 +251,9 @@ void master (char* filename) {
   int slice_size = lines_last_thread + 1;
   cell_t * my_slice = allocate_board(slice_size);
 
-  //informa size a todos
-  MPI_Bcast(&size, 1, MPI_INT, rank, MPI_COMM_WORLD);
+  int info[2] = {size, num_threads};
+  //informa info a todos
+  MPI_Bcast(info, 2, MPI_INT, rank, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
   MPI_Request* reqs = (MPI_Request*)
@@ -248,7 +281,6 @@ i, 0, MPI_COMM_WORLD, &(reqs[i]));
   }
   MPI_Waitall(num_threads-2, reqs, MPI_STATUSES_IGNORE);
   cell_t * all_packets = allocate_board(2 * (num_threads-1));
-
   for (int step = 0; step < steps; step++) {
     //envia valores das fronteiras para escravos começarem a trabalhar
     for (int i = 0; i < num_threads -1; i++) {
@@ -300,15 +332,11 @@ MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD, &(reqs[i]));
 
   MPI_Waitall(num_threads-1, reqs, MPI_STATUSES_IGNORE);
 
-  #ifdef RESULT
-    printf("Final:\n");
-    print (board,size);
-  #endif
-  free(board);
   free(borders);
   free(reqs);
   free(my_slice);
   free(all_packets);
+  end(board);
 }
 
 int main (int argc, char ** argv) {
@@ -325,9 +353,8 @@ int main (int argc, char ** argv) {
     master(argv[1]);
   } else {
     slave();
-    while(1){}
+    while(1) { pause(); }
     //espera mestre finalizar
   }
-
   return 0;
 }

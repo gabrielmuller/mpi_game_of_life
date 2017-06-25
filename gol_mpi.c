@@ -353,8 +353,7 @@ int main (int argc, char ** argv) {
     master(argv[1]);
   } else {
     slave();
-    while(1) { pause(); }
-    //espera mestre finalizar
   }
+  MPI_Finalize();
   return 0;
 }

@@ -248,7 +248,6 @@ void master (char* filename) {
   lpt();
   //a última thread ficará com o resto da divisão de linhas, e será mestre
   int lines_last_thread = size - (lines_per_thread * (num_threads-1));
-  printf("last %d\n", lines_last_thread);
   int slice_size = lines_last_thread + 1;
 
   //aloca fatia do mestre

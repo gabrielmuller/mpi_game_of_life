@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
-#include <unistd.h>
 //variáveis globais
 typedef unsigned char cell_t;
 int rank, num_threads, lines_per_thread, size;

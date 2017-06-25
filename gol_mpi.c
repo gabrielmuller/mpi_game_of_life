@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
+#include <unistd.h>
 //variáveis globais
 typedef unsigned char cell_t;
 int rank, num_threads, lines_per_thread, size;
@@ -160,7 +161,7 @@ void slave () {
   MPI_Barrier(MPI_COMM_WORLD);
   size = info[0];
   num_threads = info[1];
-  if (rank >= num_threads) {
+  if (rank >= num_threads-1) {
     return;
   }
   lpt();
@@ -336,6 +337,7 @@ MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD, &(reqs[i]));
   free(my_slice);
   free(all_packets);
   end(board);
+
 }
 
 int main (int argc, char ** argv) {

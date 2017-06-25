@@ -123,7 +123,7 @@ void read_file (FILE * f, cell_t * board, int size) {
     fgets (s, size+10,f);
     /* copy the string to the life board */
     for (i=0; i<size; i++) {
-      if(s[i] == '\0') {
+      if(s[i] == '\0' || s[i] == '\n') {
         break;
       }
       board[j*size + i] = s[i] == 'x';
@@ -248,8 +248,13 @@ void master (char* filename) {
   lpt();
   //a última thread ficará com o resto da divisão de linhas, e será mestre
   int lines_last_thread = size - (lines_per_thread * (num_threads-1));
+  printf("last %d\n", lines_last_thread);
   int slice_size = lines_last_thread + 1;
+
+  //aloca fatia do mestre
   cell_t * my_slice = allocate_board(slice_size);
+  memcpy(&(my_slice[size]),
+&(board[(num_threads-1)*lines_per_thread*size]), lines_last_thread * size);
 
   int info[2] = {size, num_threads};
   //informa info a todos
@@ -292,8 +297,6 @@ i, 0, MPI_COMM_WORLD, &(reqs[i]));
 
     //mestre também trabalha
     memcpy(my_slice, &(borders[(border_size-2)*size]), size);
-    memcpy(&(my_slice[size]),
-&(board[(num_threads-1)*lines_per_thread*size]), lines_last_thread * size);
 
     play(my_slice, size, slice_size);
 

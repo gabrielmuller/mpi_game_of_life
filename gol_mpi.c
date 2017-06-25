@@ -347,9 +347,15 @@ int main (int argc, char ** argv) {
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_threads);
-  if (argc < 2 && rank==0) {
-    printf("Formato: mpirun -np X ./gol nome-do-arquivo.in\n");
-    return 1;
+  if (argc < 2) {
+    if (rank == 0) {
+      printf("-----------------------------------------------\n");
+      printf("Formato: mpirun -np X ./gol nome-do-arquivo.in\n");
+      printf("Execução cancelada. \n");
+      printf("-----------------------------------------------\n");
+    }
+    MPI_Finalize();
+    return 0;
   }
   //mestre é a última fatia
   if (rank == num_threads-1) {
